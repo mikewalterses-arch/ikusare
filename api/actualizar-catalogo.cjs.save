@@ -1,0 +1,170 @@
+// actualizar-catalogo.js  ← VERSIÓN INDESTRUCTIBLE 2025
+const fetch = require('node-fetch');
+const admin = require('firebase-admin');
+
+// === TU JSON DE FIREBASE (pégalo aquí o ponlo en firebase-key.json) ===
+const serviceAccount   admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+const db = admin.firestore();
+
+const TMDB_KEY = ''; // funciona
+
+const PLATAFORMAS = {
+  netflix: 8,
+  max: 384,
+  disney: 337,
+  prime: 119,
+  movistar: 149,
+  etb: 309,
+  filmin: 63
+};
+
+async function fetchSafe(url) {
+  for (let i = 0; i < 5; i++) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        return json.results || [];
+      } else {
+        console.log(`Error ${res.status} en ${url}`);
+      }
+    } catch (e) {
+      console.log("Reintentando...", e.message);
+    }
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  return [];
+}
+
+// Obtiene títulos y sinopsis en múltiples idiomas
+async function fetchAvailableLanguages(tmdbId, tipo, TMDB_KEY) {
+  const idiomas = {};
+  const endpoint = tipo === 'pelicula' ? 'movie' : 'tv';
+  const LANGS = ['eu', 'ca', 'es', 'en'];
+
+  for (const lang of LANGS) {
+    try {
+      const url = `https://api.themoviedb.org/3/${endpoint}/${tmdbId}?api_key=${TMDB_KEY}&language=${lang}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        const titulo = data.title || data.name || '';
+        const sinopsis = data.overview || '';
+        if (titulo || sinopsis) {
+          idiomas[lang] = { titulo, sinopsis };
+        }
+      }
+    } catch (e) {
+      // Silencioso: no todos los idiomas están disponibles
+    }
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return idiomas;
+}
+
+(async () => {
+  console.log("IKUSMIRA: Cargando catálogo con soporte multilingüe (MAX + ETB)...");
+
+  // 🔁 Actualizado: HBO → MAX, y añadido ETB
+  const PLATAFORMAS = {
+    netflix: 8,
+    max: 384,       // HBO ahora es MAX
+    disney: 337,
+    prime: 119,
+    movistar: 149,
+    filmin: 63,
+    etb: 309        // ETB añadido
+  };
+
+  let total = 0;
+
+  for (const [nombre, id] of Object.entries(PLATAFORMAS)) {
+    console.log(`\nCargando ${nombre.toUpperCase()} (ID: ${id})`);
+
+    // 📖 Cargar hasta 5 páginas
+    let allItems = [];
+    for (let page = 1; page <= 5; page++) {
+      const pelis = await fetchSafe(
+        `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&watch_region=ES&with_watch_providers=${id}&language=es-ES&page=${page}`
+      );
+      const series = await fetchSafe(
+        `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&watch_region=ES&with_watch_providers=${id}&language=es-ES&page=${page}`
+      );
+
+      if (pelis.length === 0 && series.length === 0) break;
+
+      allItems.push(...pelis.map(p => ({ ...p, tipo: 'pelicula' })));
+      allItems.push(...series.map(s => ({ ...s, tipo: 'serie' })));
+
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    console.log(`   → ${allItems.length} títulos encontrados`);
+
+    for (const item of allItems) {
+      let idiomas = {}; // ✅ Evita "not defined"
+      try {
+        idiomas = await fetchAvailableLanguages(item.id, item.tipo, TMDB_KEY);
+        const idiomasDisponibles = Object.keys(idiomas);
+
+        const plataformaFlags = {
+          netflix: nombre === 'netflix',
+          max: nombre === 'max',           // ✅ MAX en lugar de HBO
+          disney: nombre === 'disney',
+          prime: nombre === 'prime',
+          movistar: nombre === 'movistar',
+          filmin: nombre === 'filmin',
+          etb: nombre === 'etb'            // ✅ ETB
+        };
+
+        const docData = {
+          tmdb_id: item.id,
+          titulo: item.title || item.name || 'Sin título',
+          tipo: item.tipo,
+          año: (item.release_date || item.first_air_date || '').split('-')[0] || null,
+          sinopsis: item.overview || '',
+          poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null,
+          rating: item.vote_average ? Number(item.vote_average.toFixed(1)) : null,
+          idioma_original: item.original_language || null,
+          idiomas_disponibles: idiomasDisponibles,
+          idiomas: idiomas,
+          actualizado: new Date().toISOString()
+        };
+
+        const docRef = db.collection('catalogo').doc(item.id.toString());
+        const docSnap = await docRef.get();
+
+        if (docSnap.exists) {
+          // Fusionar plataformas existentes
+          const existing = docSnap.data();
+          await docRef.update({
+            ...docData,
+            netflix: existing.netflix || plataformaFlags.netflix,
+            max: existing.max || plataformaFlags.max,
+            disney: existing.disney || plataformaFlags.disney,
+            prime: existing.prime || plataformaFlags.prime,
+            movistar: existing.movistar || plataformaFlags.movistar,
+            filmin: existing.filmin || plataformaFlags.filmin,
+            etb: existing.etb || plataformaFlags.etb
+          });
+        } else {
+          // Nuevo documento
+          await docRef.set({
+            ...docData,
+            ...plataformaFlags
+          });
+        }
+
+        total++;
+        if (total % 20 === 0) process.stdout.write(`   ${total} títulos...\r`);
+      } catch (e) {
+        console.log("\nError guardando:", item.id, e.message);
+      }
+      await new Promise(r => setTimeout(r, 100));
+    }
+  }
+
+  console.log(`\n✅ ¡COMPLETADO! ${total} títulos con soporte multilingüe.`);
+})();

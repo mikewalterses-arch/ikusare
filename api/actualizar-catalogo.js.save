@@ -1,0 +1,103 @@
+// actualizar-catalogo.js  ← VERSIÓN INDESTRUCTIBLE 2025
+const fetch = require('node-fetch');const admin = require('firebase-admin');
+
+// === TU JSON DE FIREBASE (pégalo aquí o ponlo en firebase-key.json) ===
+// ===const serviceAccount = {
+ // === "type": "service_account",
+ // === "project_id": "ikusmira-7a46d",
+ // === "private_key_id": "586382fb9291b6f02a2294d169259fe9e38b061f",
+ // === "private_key": "-----BEGIN PRIVATE // ===
+// 
+===// 
+===// 
+===// 
+===KEY-----\FA\nAeAupMwrk7nsk68iGcplY7iY9LyiOWdHdLSC4UqfaxlAO34PFv23q\n6V9bv6R0zBCpcD9CYqkd5T4/+HEyMHgCgcTtaWjdyXdjwADN1AG1yIotY1g4Pq8C\nedXOUaYLm7VncIi/36jREh6vgB+ePvzyBqEZIYm8F7g/AHsAPhvIIBegZ5vBHpz5\nQ/3OzPpAZA+INmrTcCLF2dKa8DGC7eQ7my6tkLsjmfwDv9+i4hwAMsPJcx5xKA8x\nGFPXS/Mz4cO3tE1R21Gk+W+Qs05jMAwSIEMIIAHYCzm3pberZeaigKnLTWcVVWY+\nOqcVC2wVAgMBAAECggEAT1uqImWraZ4Mdyg8B8F1HM8IcuhQl8zoC/f/LItyb3F3\nltEEG1VqB3YabamitMqCitd1VFhaJuWpvZqXivhEqC3Mt1HPlKuJOlFwxREZSGI7\nxpOsHwUOb/oPSXm2TfO8zLAP/BGUy7B3eqM03+rppy0FkghKdJPI0VI/wNcZKx0W\n812iKwVD1//pes8Ct4LSpboWjdt1whHW+jC44074lIR879ITumCCRI+SW54pmrlj\n9laNpgXPDIpQtvWfwe3O93FqDg+qQzE4wbmAtC8IVg8oIv3bkt5hGRh4RBcETiv+\nDE+3l8CXtFR7e8iLRyTik8x/JsBkjyDQPKTsf1+6mQKBgQD2PR9a73IKvjtrYjDL\nq70JA/4ij6rQwzg0mi0sqEqHgTs2Jk5LASrM0PqD9glQwpwg1RhG9Rg4OcLJt1ji\nRso24ySm9wQUTVblhCrXIMkAfQJ0DD/ldjCYURO3/7VX7vJCutTFTs6SqOPLtaz6\nadVhPwl0yBmAZnTXfqnTGwft4wKBgQDs9vShUqRbXh/HR0xs6BB/eWHKnMxHnr5A\n7KJTuCLzmAmTe7jURB7p+IgUKAD1yd3za/VGIpDSlp+ltRigbL9dhsfdDtGV5jT4\nMCrIvOMRiFF5yPYX7JvCBGze8IU9Ut9APSJijpIhYTwHwLhrOYeduf+k/RrHHhyK\n6tvfK4hfpwKBgQDq2MbT6vUgi+iN9TtGtQf41kcGXXFz5AzyFm2pXuSeMkHv1j7r\nyDQy3clgHEMsND/GDJc37cBot6Ywzt5GCXAJQ0AMwiCw4EZVZmWZghpSjefOGHTE\ne6HDU+hzn70sHagOvrP5br0UIWIJQr+0oUWylvWE3Od9j7o2YQbFYc2BMwKBgBIA\ntRcogyoZ3YozRYAkpVQ58Y8GGJL8YXHnSHHZ1HXzQA7/YExoHH0kD5qQa3pA6uba\nddjtOVl2bgyV1JgjiupdGgQWYx/jTHTqm+WCTDIBzEbXWLL6m97CnU7WsRi2mhV0\nT49zS3DTxU7Fen1S8pWuEtkDDazBAeQf8bJjyUmTAoGBAOA41G1z9Wx0Zrxbs1gq\nHLvJu4McERJ4WASAFZ6xpTMGKe1n0iLhqwcnyJurgLz+xLfKao0+tlzSxAk4EoCA\ndDp2X+96CDAm9WG/mCriUe4b29mOsTmN4i3iXmPbh4D4P1Tb7IF7raOZ6k33xoNv\n5TaBzh9jjhvWP2KyS2Bl9e2t\n-----END 
+// ===
+// ===PRIVATE KEY-----\n",
+ // === "client_email": "firebase-adminsdk-fbsvc@ikusmira-7a46d.iam.gserviceaccount.com",
+ // === "client_id": "111398282820701600990",
+ // === "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40ikusmira-7a46d.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+};
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+const db = admin.firestore();
+
+const TMDB_KEY = '; // funciona
+
+const PLATAFORMAS = {
+  netflix: 8,
+  hbo: 384,
+  disney: 337,
+  prime: 119,
+  movistar: 149,
+  filmin: 63
+
+async function fetchSafe(url) {
+  for (let i = 0; i < 5; i++) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        return json.results || [];
+      } else {
+        console.log(`Error ${res.status} en ${url}`);
+      }
+    } catch (e) {
+      console.log("Reintentando...", e.message);
+    }
+    await new Promise(r => setTimeout(r, 2000)); // espera 2 segundos
+  }
+  return [];
+}
+
+(async () => {
+  console.log("IKUSMIRA: Empezando carga masiva del catálogo España 2025");
+
+  let total = 0;
+
+  for (const [nombre, id] of Object.entries(PLATAFORMAS)) {
+    console.log(`\nCargando ${nombre.toUpperCase()} (provider_id: ${id})...`);
+
+    const pelis = await fetchSafe(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&watch_region=ES&with_watch_providers=${id}&language=es-ES&page=1`);
+    const series = await fetchSafe(`https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&watch_region=ES&with_watch_providers=${id}&language=es-ES&page=1`);
+
+    const items = [...pelis, ...series];
+    console.log(`   → ${items.length} títulos encontrados`);
+
+    for (const item of items) {
+      try {
+        await db.collection('catalogo').doc(item.id.toString()).set({
+          titulo: item.title || item.name || 'Sin título',
+          tipo: item.title ? 'pelicula' : 'serie',
+          año: (item.release_date || item.first_air_date || '').split('-')[0] || null,
+          sinopsis: item.overview || '',
+          poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null,
+          rating: item.vote_average ? Number(item.vote_average.toFixed(1)) : null,
+          netflix: nombre === 'netflix',
+          hbo: nombre === 'hbo',
+          disney: nombre === 'disney',
+          prime: nombre === 'prime',
+          movistar: nombre === 'movistar',
+          filmin: nombre === 'filmin',
+          actualizado: new Date().toISOString()
+        }, { merge: true });
+
+        total++;
+        if (total % 50 === 0) process.stdout.write(`   ${total} títulos guardados...\r`);
+      } catch (e) {
+        console.log("Error guardando título:", item.id, e.message);
+      }
+      await new Promise(r => setTimeout(r, 100)); // ser buenos con TMDB
+    }
+  }
+
+  console.log(`\n¡TERMINADO! ${total} títulos cargados en Firebase`);
+  console.log("Ve a Firebase Console → Firestore → colección 'catalogo'");
+  console.log("¡Ya puedes hacer la app con FlutterFlow!");
+})();
