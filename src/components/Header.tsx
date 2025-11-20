@@ -1,4 +1,3 @@
-// src/components/Header.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -16,7 +15,11 @@ const translations = {
   languageButton: { eu: 'Castellano', es: 'Euskara' },
 };
 
-export default function Header() {
+export default function Header({
+  onToggleSidebar,
+}: {
+  onToggleSidebar: () => void;
+}) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [language, setLanguage] = useState<Language>('eu');
@@ -56,7 +59,23 @@ export default function Header() {
   return (
     <header className="bg-[#1D3557] text-white py-5 px-4 sm:px-6 border-b border-white/10 sticky top-0 z-40 backdrop-blur-xl bg-opacity-95">
       <div className="w-full flex items-center justify-between">
-        {/* Logo + Nombre */}
+        {/* Hamburger (solo móvil) */}
+        <button
+          onClick={onToggleSidebar}
+          className="md:hidden text-white mr-3 p-2 rounded-lg hover:bg-white/10"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-7 w-7"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+          </svg>
+        </button>
+
+        {/* Logo */}
         <div
           onClick={() => router.push('/')}
           className="cursor-pointer flex items-center gap-3 group"
@@ -69,7 +88,7 @@ export default function Header() {
           </h1>
         </div>
 
-        {/* Derecha: Desplegable de usuario + idioma */}
+        {/* Usuario */}
         <div className="relative">
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -84,7 +103,9 @@ export default function Header() {
                 className="w-full h-full object-cover"
               />
             </div>
+
             <span className="font-medium hidden md:block">{user.username}</span>
+
             <svg
               className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
               fill="none"
@@ -98,43 +119,54 @@ export default function Header() {
           {isOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+
               <div className="absolute right-0 mt-3 w-80 bg-gray-900/95 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden z-50">
                 {/* Cabecera */}
                 <div className="px-6 py-5 border-b border-white/10">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-full overflow-hidden ring-4 ring-[#E63946]/50">
-                      <Image src={avatarSrc} alt={user.username} width={64} height={64} className="object-cover" />
+                      <Image
+                        src={avatarSrc}
+                        alt={user.username}
+                        width={64}
+                        height={64}
+                        className="object-cover"
+                      />
                     </div>
                     <div>
                       <p className="font-bold text-xl">{user.username}</p>
                       <div className="flex gap-5 text-sm text-gray-300 mt-2">
-                        <span className="flex items-center gap-1">
-                          <svg className="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                            <circle cx="9" cy="7" r="4" />
-                          </svg>
-                          {user.followers}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                          </svg>
-                          {user.following}
-                        </span>
+                        <span className="flex items-center gap-1">{user.followers}</span>
+                        <span className="flex items-center gap-1">{user.following}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Opciones */}
                 <div className="py-3">
                   <button
-                    onClick={() => { router.push('/profile'); setIsOpen(false); }}
-                    className="w-full px-6 py-4 flex items-center gap-4 hover:bg:white/10 transition text-left"
+                    onClick={() => {
+                      router.push('/profile');
+                      setIsOpen(false);
+                    }}
+                    className="w-full px-6 py-4 flex items-center gap-4 hover:bg-white/10 transition text-left"
                   >
-                    {/* ... resto igual que tenías ... */}
+                    {t.profile}
                   </button>
-                  {/* resto del dropdown igual que tu código */}
+
+                  <button
+                    onClick={toggleLanguage}
+                    className="w-full px-6 py-4 flex items-center gap-4 hover:bg-white/10 transition text-left"
+                  >
+                    {t.languageButton}
+                  </button>
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full px-6 py-4 flex items-center gap-4 hover:bg-red-600/20 text-red-400 transition text-left"
+                  >
+                    {t.signOut}
+                  </button>
                 </div>
               </div>
             </>
