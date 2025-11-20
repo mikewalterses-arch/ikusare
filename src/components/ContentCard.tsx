@@ -14,6 +14,8 @@ type ContentCardProps = {
   languages: string[];
   platforms: string[];
   synopsis: string;
+  // valor manual confirmado por el admin
+  isEuskeraManual?: boolean;
 };
 
 export default function ContentCard({
@@ -26,22 +28,38 @@ export default function ContentCard({
   genres = [],
   languages,
   platforms,
-  synopsis,
+  synopsis, // ya no se usa aquí
+  isEuskeraManual,
 }: ContentCardProps) {
   const router = useRouter();
-  const isEuskera = languages.includes('eu');
+
+  // Solo cuenta el valor manual, ignoramos languages para el badge
+  const isEuskera = !!isEuskeraManual;
 
   const getPlatformLabel = (platform: string) => {
     switch (platform.toLowerCase()) {
-      case 'etb': return 'ETB';
-      case 'netflix': return 'N';
-      case 'max': case 'hbomax': return 'MAX';
-      case 'disney': case 'disney+': return 'D+';
-      case 'prime': case 'primevideo': return 'Prime';
-      case 'filmin': return 'Filmin';
-      case 'appletv': case 'apple tv+': return 'TV+';
-      case 'movistar': return 'M+';
-      default: return platform.toUpperCase().slice(0, 4);
+      case 'etb':
+        return 'ETB';
+      case 'netflix':
+        return 'N';
+      case 'max':
+      case 'hbomax':
+        return 'MAX';
+      case 'disney':
+      case 'disney+':
+        return 'D+';
+      case 'prime':
+      case 'primevideo':
+        return 'Prime';
+      case 'filmin':
+        return 'Filmin';
+      case 'appletv':
+      case 'apple tv+':
+        return 'TV+';
+      case 'movistar':
+        return 'M+';
+      default:
+        return platform.toUpperCase().slice(0, 4);
     }
   };
 
@@ -65,13 +83,15 @@ export default function ContentCard({
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-            <span className="text-gray-500 text-xs sm:text-sm font-medium">No poster</span>
+            <span className="text-gray-500 text-xs sm:text-sm font-medium">
+              No poster
+            </span>
           </div>
         )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-        {/* BADGE: Euskera - AHORA MUY PEQUEÑO EN MÓVIL */}
+        {/* BADGE: Euskera (solo si el admin lo ha marcado) */}
         {isEuskera && (
           <div
             className="absolute top-2 left-2 sm:top-3 sm:left-3
@@ -84,7 +104,7 @@ export default function ContentCard({
           </div>
         )}
 
-        {/* BADGE: Film / Serie - también reducido */}
+        {/* BADGE: Film / Serie */}
         <div
           className="absolute top-2 right-2 sm:top-3 sm:right-3
                      bg-black/70 backdrop-blur-md text-white
@@ -119,7 +139,7 @@ export default function ContentCard({
         </div>
       </div>
 
-      {/* Info */}
+      {/* Info (sin sinopsis) */}
       <div className="p-3 sm:p-4 md:p-5 space-y-2 sm:space-y-3">
         <h3
           className="font-bold text-sm sm:text-base md:text-lg text-white
@@ -164,13 +184,6 @@ export default function ContentCard({
             ))}
           </div>
         )}
-
-        <p
-          className="hidden md:block text-sm text-gray-400 line-clamp-3
-                     opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-        >
-          {synopsis || 'Sin sinopsis disponible.'}
-        </p>
       </div>
 
       <div className="absolute inset-0 rounded-2xl ring-4 ring-[#E63946]/0 group-hover:ring-[#E63946]/30 transition-all duration-500 pointer-events-none" />

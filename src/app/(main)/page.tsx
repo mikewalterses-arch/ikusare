@@ -121,27 +121,26 @@ export default function HomePage() {
               key={item.id}
               className="w-28 sm:w-36 md:w-48 flex-shrink-0"
             >
-              <ContentCard
-                id={item.id}
-                title={item.titulo || item.title || ''}
-                poster={item.poster ?? null}
-                type={item.tipo as 'movie' | 'serie'}
-                year={item.año !== undefined ? String(item.año) : undefined}
-                rating={item.rating}
-                genres={item.generos || []}
-                languages={item.idiomas_disponibles || []}
-                platforms={
-                  [
-                    item.netflix && 'netflix',
-                    item.etb && 'etb',
-                    item.disney && 'disney',
-                    item.prime && 'prime',
-                    item.filmin && 'filmin',
-                    item['apple tv'] && 'apple tv',
-                  ].filter(Boolean) as string[]
-                }
-                synopsis={item.sinopsis || ''}
-              />
+            <ContentCard
+              id={item.id}
+              title={item.titulo || item.title || ''}
+              poster={item.poster ?? null}
+              type={item.tipo as 'movie' | 'serie'}
+              year={item.año !== undefined ? String(item.año) : undefined}
+              rating={item.rating}
+              genres={item.generos || []}
+              languages={item.idiomas_disponibles || []}
+              platforms={[
+                item.netflix && 'netflix',
+                item.etb && 'etb',
+                item.disney && 'disney',
+                item.prime && 'prime',
+                item.filmin && 'filmin',
+                item['apple tv'] && 'appletv',
+              ].filter(Boolean) as string[]}
+              synopsis={item.sinopsis || ''}
+              isEuskeraManual={item.euskera_manual}   // 👈 nuevo
+            />
             </div>
           ))}
         </div>

@@ -1,32 +1,57 @@
 // src/components/Sidebar.tsx
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Home, Search, User, BookOpen, LogOut } from 'lucide-react';
+import { Home, Search, User, BookOpen, LogOut, Settings } from 'lucide-react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
-export default function Sidebar({
-  mobileOpen,
-  onClose,
-}: {
+type SidebarProps = {
   mobileOpen?: boolean;
   onClose?: () => void;
-}) {
+};
+
+export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const snap = await getDoc(userRef);
+        const data = snap.data();
+        setIsAdmin(data?.type === 'admin');
+      } catch (error) {
+        console.error('Error leyendo tipo de usuario:', error);
+        setIsAdmin(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const NavButton = ({
     icon: Icon,
     label,
     path,
   }: {
-    icon: any;
+    icon: React.ComponentType<{ className?: string }>;
     label: string;
     path: string;
   }) => (
     <button
       onClick={() => {
         router.push(path);
-        onClose?.(); // Cierra el drawer en móvil
+        onClose?.(); // cierra el drawer en móvil
       }}
       className="group relative p-3 rounded-xl transition-all duration-200 hover:bg-[#E63946]/20"
       aria-label={label}
@@ -74,13 +99,18 @@ export default function Sidebar({
           <NavButton icon={Search} label="Bilatu" path="/search" />
           <NavButton icon={User} label="Profila" path="/profile" />
           <NavButton icon={BookOpen} label="Egunkaria" path="/journal" />
+
+          {/* Botón de Admin solo si type === 'admin' en Firestore */}
+          {isAdmin && (
+            <NavButton icon={Settings} label="Konfigurazioa" path="/admin" />
+          )}
         </div>
 
-        {/* Cerrar sesión */}
+        {/* Cerrar sesión abajo del todo (de momento solo consola) */}
         <div className="mt-auto mb-8">
           <button
             onClick={() => {
-              console.log('Cerrar sesión');
+              console.log('Cerrar sesión (implementa aquí tu lógica de logout)');
               onClose?.();
             }}
             className="group relative p-3 rounded-xl transition-all duration-200 hover:bg-red-500/20"
