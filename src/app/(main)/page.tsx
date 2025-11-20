@@ -26,7 +26,6 @@ type ContentItem = {
   filmin?: boolean;
   'apple tv'?: boolean;
   sinopsis?: string;
-  // Permitimos campos adicionales por si Firestore tiene más cosas
   [key: string]: any;
 };
 
@@ -64,7 +63,6 @@ export default function HomePage() {
         ...(doc.data() as Omit<ContentItem, 'id'>),
       }));
 
-      // Filtramos y ordenamos
       setEnEuskera(
         all.filter((c) => c.idiomas_disponibles?.includes('eu')).slice(0, 15),
       );
@@ -115,33 +113,35 @@ export default function HomePage() {
           {title}
         </h2>
       </div>
+
       <div className="overflow-x-auto scrollbar-hide pb-4 -mx-4 px-4">
-        <div className="flex gap-6 min-w-max">
+        <div className="flex gap-3 sm:gap-4 md:gap-6 min-w-max">
           {items.map((item) => (
-            <div key={item.id} className="w-48 flex-shrink-0">
+            <div
+              key={item.id}
+              className="w-28 sm:w-36 md:w-48 flex-shrink-0"
+            >
               <ContentCard
-                  id={item.id}
-                  title={item.titulo || item.title || ''}
-                  // ContentCard espera string | null → normalizamos
-                  poster={item.poster ?? null}
-                  type={item.tipo as 'movie' | 'serie'}
-                  // ContentCard espera string | undefined → convertimos el número a string
-                  year={item.año !== undefined ? String(item.año) : undefined}
-                  rating={item.rating}
-                  genres={item.generos || []}
-                  languages={item.idiomas_disponibles || []}
-                  platforms={
-                    [
-                      item.netflix && 'netflix',
-                      item.etb && 'etb',
-                      item.disney && 'disney',
-                      item.prime && 'prime',
-                      item.filmin && 'filmin',
-                      item['apple tv'] && 'apple tv',
-                    ].filter(Boolean) as string[]
-                  }
-                  synopsis={item.sinopsis || ''}
-/>
+                id={item.id}
+                title={item.titulo || item.title || ''}
+                poster={item.poster ?? null}
+                type={item.tipo as 'movie' | 'serie'}
+                year={item.año !== undefined ? String(item.año) : undefined}
+                rating={item.rating}
+                genres={item.generos || []}
+                languages={item.idiomas_disponibles || []}
+                platforms={
+                  [
+                    item.netflix && 'netflix',
+                    item.etb && 'etb',
+                    item.disney && 'disney',
+                    item.prime && 'prime',
+                    item.filmin && 'filmin',
+                    item['apple tv'] && 'apple tv',
+                  ].filter(Boolean) as string[]
+                }
+                synopsis={item.sinopsis || ''}
+              />
             </div>
           ))}
         </div>
@@ -157,14 +157,14 @@ export default function HomePage() {
       </div>
 
       <main className="relative z-10 max-w-7xl mx-auto px-6 py-10 pb-20">
-        {/* Bienvenida personalizada */}
+        {/* Bienvenida */}
         <div className="mb-16 text-center">
           <p className="mt-4 text-xl text-gray-300">
             Gaurko gomendioak zure gustuetarako prestatuta
           </p>
         </div>
 
-        {/* CARRUSELES */}
+        {/* Carruseles */}
         {enEuskera.length > 0 && (
           <CarouselSection title="Euskaraz ikusgai" items={enEuskera} />
         )}
@@ -178,7 +178,11 @@ export default function HomePage() {
         )}
 
         {nuevas.length > 0 && (
-          <CarouselSection title="Berri-berriak" items={nuevas} icon="🆕" />
+          <CarouselSection
+            title="Berri-berriak"
+            items={nuevas}
+            icon="🆕"
+          />
         )}
 
         {netflix.length > 0 && (
@@ -190,7 +194,11 @@ export default function HomePage() {
         )}
 
         {etb.length > 0 && (
-          <CarouselSection title="ETB-n ikusgai" items={etb} icon="📺" />
+          <CarouselSection
+            title="ETB-n ikusgai"
+            items={etb}
+            icon="📺"
+          />
         )}
 
         {/* Mensaje final */}
