@@ -13,9 +13,8 @@ type ContentCardProps = {
   genres?: string[];
   languages: string[];
   platforms: string[];
-  synopsis: string;
-  // valor manual confirmado por el admin
   isEuskeraManual?: boolean;
+  synopsis?: string; // por si la necesitas más adelante
 };
 
 export default function ContentCard({
@@ -28,13 +27,13 @@ export default function ContentCard({
   genres = [],
   languages,
   platforms,
-  synopsis, // ya no se usa aquí
   isEuskeraManual,
+  synopsis, // ahora mismo no lo usamos en la card
 }: ContentCardProps) {
   const router = useRouter();
 
-  // Solo cuenta el valor manual, ignoramos languages para el badge
-  const isEuskera = !!isEuskeraManual;
+  // ✅ Solo manual: si euskera_manual === true
+  const isEuskera = isEuskeraManual === true;
 
   const getPlatformLabel = (platform: string) => {
     switch (platform.toLowerCase()) {
@@ -89,9 +88,10 @@ export default function ContentCard({
           </div>
         )}
 
+        {/* Gradiente */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-        {/* BADGE: Euskera (solo si el admin lo ha marcado) */}
+        {/* Badge Euskera — solo si isEuskeraManual === true */}
         {isEuskera && (
           <div
             className="absolute top-2 left-2 sm:top-3 sm:left-3
@@ -104,7 +104,7 @@ export default function ContentCard({
           </div>
         )}
 
-        {/* BADGE: Film / Serie */}
+        {/* Badge tipo */}
         <div
           className="absolute top-2 right-2 sm:top-3 sm:right-3
                      bg-black/70 backdrop-blur-md text-white
@@ -139,12 +139,12 @@ export default function ContentCard({
         </div>
       </div>
 
-      {/* Info (sin sinopsis) */}
+      {/* Info */}
       <div className="p-3 sm:p-4 md:p-5 space-y-2 sm:space-y-3">
         <h3
           className="font-bold text-sm sm:text-base md:text-lg text-white
                      leading-tight line-clamp-2
-                     group-hover:text-[#E63946] transition-colors duration-300"
+                     group-hover:text-[#E63946] transition-colors"
         >
           {title}
         </h3>
@@ -154,8 +154,7 @@ export default function ContentCard({
 
           {typeof rating === 'number' && (
             <div
-              className="flex items-center gap-1.5
-                         bg-yellow-500/10 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full"
+              className="flex items-center gap-1.5 bg-yellow-500/10 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full"
             >
               <svg
                 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500"
@@ -186,7 +185,7 @@ export default function ContentCard({
         )}
       </div>
 
-      <div className="absolute inset-0 rounded-2xl ring-4 ring-[#E63946]/0 group-hover:ring-[#E63946]/30 transition-all duration-500 pointer-events-none" />
+      <div className="absolute inset-0 rounded-2xl ring-4 ring-[#E63946]/0 group-hover:ring-[#E63946]/30 transition-all pointer-events-none" />
     </div>
   );
 }
