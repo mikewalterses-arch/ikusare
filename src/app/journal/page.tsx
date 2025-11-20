@@ -3,15 +3,17 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuth, signOut } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
 export default function JournalPage() {
   const [title, setTitle] = useState('');
-  const [rating, setRating] = useState(0);
-  const [timesWatched, setTimesWatched] = useState(1);
-  const [dateWatched, setDateWatched] = useState(new Date().toISOString().split('T')[0]);
+  const [rating, setRating] = useState<number>(0);
+  const [timesWatched, setTimesWatched] = useState<number>(1);
+  const [dateWatched, setDateWatched] = useState(
+    new Date().toISOString().split('T')[0]
+  );
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -31,10 +33,10 @@ export default function JournalPage() {
       await setDoc(doc(db, 'journals', `${user.uid}_${Date.now()}`), {
         title,
         rating,
-        timesWatched: parseInt(timesWatched),
+        timesWatched, // ya es un número
         dateWatched,
         createdAt: new Date().toISOString(),
-        userId: user.uid
+        userId: user.uid,
       });
 
       // Limpiar formulario
@@ -45,7 +47,6 @@ export default function JournalPage() {
 
       // Redirigir a la lista de entradas
       router.push('/journal');
-
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -55,10 +56,11 @@ export default function JournalPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
 
       <main className="max-w-4xl mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold text-[#1D3557] mb-6">Mi Diario de Películas</h1>
+        <h1 className="text-3xl font-bold text-[#1D3557] mb-6">
+          Mi Diario de Películas
+        </h1>
 
         {error && <p className="text-red-500 mb-4">{error}</p>}
 
@@ -66,7 +68,13 @@ export default function JournalPage() {
           {/* Formulario */}
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-4">Añadir entrada</h2>
-            <form onSubmit={(e) => { e.preventDefault(); handleAddEntry(); }} className="space-y-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAddEntry();
+              }}
+              className="space-y-4"
+            >
               <div>
                 <input
                   type="text"
@@ -81,18 +89,22 @@ export default function JournalPage() {
               <div>
                 <label className="block mb-2">Calificación:</label>
                 <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map(star => (
+                  {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
                       type="button"
                       onClick={() => setRating(star)}
-                      className={`text-2xl ${star <= rating ? 'text-yellow-500' : 'text-gray-300'}`}
+                      className={`text-2xl ${
+                        star <= rating ? 'text-yellow-500' : 'text-gray-300'
+                      }`}
                     >
                       ★
                     </button>
                   ))}
                 </div>
-                <p className="mt-1 text-sm text-gray-500">Tu calificación: {rating || 'No valorada'}</p>
+                <p className="mt-1 text-sm text-gray-500">
+                  Tu calificación: {rating || 'No valorada'}
+                </p>
               </div>
 
               <div>
@@ -100,8 +112,8 @@ export default function JournalPage() {
                 <input
                   type="number"
                   value={timesWatched}
-                  onChange={(e) => setTimesWatched(e.target.value)}
-                  min="1"
+                  onChange={(e) => setTimesWatched(Number(e.target.value))}
+                  min={1}
                   className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-[#E63946]"
                   required
                 />
@@ -122,7 +134,9 @@ export default function JournalPage() {
                 type="submit"
                 disabled={loading}
                 className={`w-full py-3 bg-[#E63946] text-white rounded-lg font-medium transition ${
-                  loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#d62e3a]'
+                  loading
+                    ? 'opacity-70 cursor-not-allowed'
+                    : 'hover:bg-[#d62e3a]'
                 }`}
               >
                 {loading ? 'Guardando...' : 'Añadir entrada'}
@@ -136,11 +150,15 @@ export default function JournalPage() {
             <div className="space-y-4">
               <div className="p-4 border rounded">
                 <h3 className="font-medium">Go!azen</h3>
-                <p className="text-sm text-gray-500">📅 Nov 19, 2025 • ⭐ 4/5 • 1 vez vista</p>
+                <p className="text-sm text-gray-500">
+                  📅 Nov 19, 2025 • ⭐ 4/5 • 1 vez vista
+                </p>
               </div>
               <div className="p-4 border rounded">
                 <h3 className="font-medium">Loreak</h3>
-                <p className="text-sm text-gray-500">📅 Nov 15, 2025 • ⭐ 5/5 • 2 veces vistas</p>
+                <p className="text-sm text-gray-500">
+                  📅 Nov 15, 2025 • ⭐ 5/5 • 2 veces vistas
+                </p>
               </div>
             </div>
           </div>
