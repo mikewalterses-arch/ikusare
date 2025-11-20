@@ -1,3 +1,4 @@
+// src/components/Sidebar.tsx
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -13,7 +14,6 @@ export default function Sidebar({
 }) {
   const router = useRouter();
 
-  // Estilo compartido para los botones
   const NavButton = ({
     icon: Icon,
     label,
@@ -32,6 +32,7 @@ export default function Sidebar({
       aria-label={label}
     >
       <Icon className="w-6 h-6 text-gray-300 group-hover:text-[#E63946] transition" />
+      {/* Tooltip solo en desktop */}
       <span className="absolute left-16 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none hidden md:block">
         {label}
       </span>
@@ -51,7 +52,7 @@ export default function Sidebar({
       {/* SIDEBAR */}
       <div
         className={`
-          fixed left-0 top-0 h-screen w-64 md:w-16 bg-[#1D3557] flex flex-col items-center pt-6 space-y-8 z-50 
+          fixed left-0 top-0 h-screen w-16 bg-[#1D3557] flex flex-col items-center pt-6 space-y-8 z-50
           transition-transform duration-300
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
@@ -67,6 +68,7 @@ export default function Sidebar({
           />
         </div>
 
+        {/* Navegación principal */}
         <div className="flex flex-col space-y-6">
           <NavButton icon={Home} label="Hasiera" path="/" />
           <NavButton icon={Search} label="Bilatu" path="/search" />
