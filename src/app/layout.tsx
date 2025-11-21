@@ -30,33 +30,29 @@ const barriecito = Barriecito({
   display: 'swap',
 });
 
-// 👇 AQUI AÑADIMOS openGraph + metadataBase
+// ✅ metadata con OpenGraph
 export const metadata: Metadata = {
-  metadataBase: new URL('https://https://ikusare.vercel.app/'), // ej: https://ikusare.vercel.app
+  metadataBase: new URL('https://ikusare.vercel.app'),
   title: 'IkuSare',
-  description: 'IkuSare - Red social de cine y series en euskera',
+  description: 'IkuSare — Euskarazko zinema eta telesailen sare soziala',
   openGraph: {
     title: 'IkuSare',
-    description: 'IkuSare - Red social de cine y series en euskera',
-    url: 'https://https://ikusare.vercel.app/', // mismo dominio
+    description: 'IkuSare — Euskarazko zinema eta telesailen sare soziala',
+    url: 'https://ikusare.vercel.app',
     siteName: 'IkuSare',
     images: [
       {
-        url: '/icon.png', // la imagen que has puesto en /public
+        url: '/images/LogoIkusareLetras.png', // 🔴 ahora apunta a public/images
         width: 1200,
         height: 630,
-        alt: 'IkuSare - Red social de cine y series en euskera',
+        alt: 'IkuSare — Euskarazko zinema eta telesailen sare soziala',
       },
     ],
     type: 'website',
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="eu"
