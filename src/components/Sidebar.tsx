@@ -85,7 +85,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         {/* Logo */}
         <div className="mb-8">
           <Image
-            src="/images/Logo_IkuSare_Solo.svg"
+            src="/images/Logo_IkuSare.svg"
             alt="IkuSare"
             width={48}
             height={48}
