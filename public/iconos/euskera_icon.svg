@@ -1,0 +1,23 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <rect width="24" height="24" rx="6" fill="#0F8F3F" />
+  <line x1="4" y1="12" x2="20" y2="12" stroke="white" stroke-width="2" stroke-linecap="round" />
+  <line x1="12" y1="4" x2="12" y2="20" stroke="white" stroke-width="2" stroke-linecap="round" />
+  <line
+    x1="6"
+    y1="6"
+    x2="18"
+    y2="18"
+    stroke="#D62828"
+    stroke-width="2"
+    stroke-linecap="round"
+  />
+  <line
+    x1="18"
+    y1="6"
+    x2="6"
+    y2="18"
+    stroke="#D62828"
+    stroke-width="2"
+    stroke-linecap="round"
+  />
+</svg>
