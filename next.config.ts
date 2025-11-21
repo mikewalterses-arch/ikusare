@@ -5,7 +5,6 @@ import path from "path";
 const nextConfig = {
   reactStrictMode: true,
 
-  // 👇 Esto elimina el warning de Turbopack
   turbopack: {
     root: path.resolve(__dirname),
   },
@@ -13,20 +12,19 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'image.tmdb.org',
-        port: '',
-        pathname: '/t/p/**',
+        protocol: "https",
+        hostname: "image.tmdb.org",
+        pathname: "/t/p/**",
       },
       {
-        protocol: 'https',
-        hostname: 'flagcdn.com',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "flagcdn.com",
+        pathname: "/**",
       },
       {
-        protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "firebasestorage.googleapis.com",
+        pathname: "/**", // 👈 amplio, vale para cualquier URL de storage
       },
     ],
   },

@@ -1,7 +1,8 @@
 // src/lib/firebase.ts
-import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
     apiKey: "AIzaSyA088577cTFA0zHj_sLfDba7AbMyiGN1XI",
@@ -13,6 +14,12 @@ const firebaseConfig = {
     measurementId: "G-ZE0N6XWZMM"
 };
 
-const app = initializeApp(firebaseConfig);
+// Evitar inicializar dos veces en Next
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+// ✅ exports que usas en toda la app
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app);   // 👈 ESTE ES EL QUE FALTABA
+
+export default app;
