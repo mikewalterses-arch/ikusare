@@ -1,0 +1,14 @@
+//Para subir a github:
+
+git status
+git init
+git add .
+git commit -m "Subida de todo el proyecto"
+git push origin main
+
+O de una vez:
+
+git add .
+git commit -m "Actualización completa"
+git push
+

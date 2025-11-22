@@ -2,37 +2,109 @@
 
 import { useState } from "react";
 
+type SyncTarget = "makusi" | "etb" | "tmdb" | "primeran" | "all";
+
+// ⚠️ RELLENA ESTAS URLs CON LAS QUE VES EN FIREBASE → FUNCTIONS
+// Deben ser las de Cloud Run, tipo: https://syncmakusi-XXXX-uc.a.run.app
+const ENDPOINTS: Record<Exclude<SyncTarget, "all">, string> = {
+  makusi: "https://syncmakusi-XXXX-uc.a.run.app",
+  etb: "https://syncetbonly-XXXX-uc.a.run.app",
+  tmdb: "https://synccataloghttp-XXXX-uc.a.run.app",
+  primeran: "https://syncprimeran-XXXX-uc.a.run.app",
+};
+
 export default function AdminHome() {
-  const [loading, setLoading] = useState(false);
+  const [loadingTarget, setLoadingTarget] = useState<SyncTarget | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // ⚠️ Sustituye esta URL por la que te dé Firebase en la consola (Functions -> syncCatalogHttp)
-  const SYNC_URL =
-    "https://us-central1-ikusmira-7a46d.cloudfunctions.net/syncCatalogHttp";
+  const callEndpoint = async (target: Exclude<SyncTarget, "all">) => {
+    const url = ENDPOINTS[target];
 
-  const handleSync = async () => {
-    setLoading(true);
+    const res = await fetch(url, {
+      method: "POST",
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok || data?.ok === false) {
+      throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
+    }
+
+    return data as { ok: boolean; message?: string; imported?: number };
+  };
+
+  const handleSync = async (target: SyncTarget) => {
+    setLoadingTarget(target);
     setMessage(null);
     setError(null);
-    try {
-      const res = await fetch(SYNC_URL, {
-        method: "POST", // o "GET" si lo prefieres
-      });
 
-      if (!res.ok) {
-        throw new Error("Error HTTP " + res.status);
+    try {
+      if (target === "all") {
+        // Ejecuta TMDB → ETB → Makusi → Primeran en secuencia
+        const results: string[] = [];
+        let totalImported = 0;
+
+        // 1) TMDB (todas las plataformas soportadas por TMDB)
+        const tmdbResult = await callEndpoint("tmdb");
+        if (tmdbResult.imported != null) {
+          totalImported += tmdbResult.imported;
+        }
+        results.push(tmdbResult.message || "TMDB sincronizado.");
+
+        // 2) ETB
+        const etbResult = await callEndpoint("etb");
+        if (etbResult.imported != null) {
+          totalImported += etbResult.imported;
+        }
+        results.push(etbResult.message || "ETB sincronizado.");
+
+        // 3) Makusi
+        const makusiResult = await callEndpoint("makusi");
+        if (makusiResult.imported != null) {
+          totalImported += makusiResult.imported;
+        }
+        results.push(makusiResult.message || "Makusi sincronizado.");
+
+        // 4) Primeran
+        const primeranResult = await callEndpoint("primeran");
+        if (primeranResult.imported != null) {
+          totalImported += primeranResult.imported;
+        }
+        results.push(primeranResult.message || "Primeran sincronizado.");
+
+        const resumen =
+          results.join(" ") +
+          (totalImported
+            ? ` Elementos importados/actualizados en total: ${totalImported}.`
+            : "");
+
+        setMessage(resumen || "Sync de todas las fuentes completado.");
+        return;
       }
 
-      const data = await res.json().catch(() => null);
-      setMessage(data?.message || "Catálogo sincronizado correctamente.");
+      // Caso simple: una fuente concreta (makusi, etb, tmdb o primeran)
+      const data = await callEndpoint(target);
+      const imported = data.imported;
+      const sourceLabel = target.toUpperCase();
+
+      setMessage(
+        imported != null
+          ? `Sync de ${sourceLabel} completada. Elementos importados/actualizados: ${imported}.`
+          : data.message || `Sync de ${sourceLabel} completada correctamente.`
+      );
     } catch (e: any) {
       console.error(e);
-      setError("No se ha podido sincronizar el catálogo.");
+      setError(
+        e?.message ||
+          "No se ha podido sincronizar. Revisa los logs de Firebase."
+      );
     } finally {
-      setLoading(false);
+      setLoadingTarget(null);
     }
   };
+
+  const isLoading = (target: SyncTarget) => loadingTarget === target;
 
   return (
     <div className="text-white px-6 py-10 space-y-6">
@@ -55,34 +127,65 @@ export default function AdminHome() {
           </p>
         </a>
 
-        {/* Tarjeta: sincronizar catálogo */}
+        {/* Tarjeta: sincronización por fuentes */}
         <div className="p-5 bg-[#1D3557] rounded-xl flex flex-col gap-3">
           <h2 className="text-xl font-semibold">Sincronizar catálogo</h2>
           <p className="text-gray-300 text-sm">
-            Lanza ahora la actualización con TMDB: nuevas plataformas, idiomas y
-            detección de euskera. Útil después de cambios importantes.
+            Lanza la sincronización por fuente: Makusi (selección en euskera),
+            ETB/Primeran Nahieran o proveedores TMDB (Netflix, Disney, Prime,
+            etc.). También puedes lanzar un sync general.
           </p>
-          <button
-            onClick={handleSync}
-            disabled={loading}
-            className="mt-2 inline-flex items-center justify-center rounded-lg bg-[#E63946] px-4 py-2 text-sm font-semibold text-white hover:bg-[#E63946]/80 disabled:opacity-60 disabled:cursor-not-allowed transition"
-          >
-            {loading ? "Sincronizando..." : "Sincronizar catálogo ahora"}
-          </button>
+
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <button
+              onClick={() => handleSync("makusi")}
+              disabled={isLoading("makusi")}
+              className="rounded-lg bg-[#E63946] px-3 py-2 text-xs font-semibold text-white hover:bg-[#E63946]/80 disabled:opacity-60 disabled:cursor-not-allowed transition"
+            >
+              {isLoading("makusi") ? "Sync Makusi..." : "Sync Makusi"}
+            </button>
+
+            <button
+              onClick={() => handleSync("etb")}
+              disabled={isLoading("etb")}
+              className="rounded-lg bg-[#457B9D] px-3 py-2 text-xs font-semibold text-white hover:bg-[#457B9D]/80 disabled:opacity-60 disabled:cursor-not-allowed transition"
+            >
+              {isLoading("etb") ? "Sync ETB..." : "Sync ETB"}
+            </button>
+
+            <button
+              onClick={() => handleSync("tmdb")}
+              disabled={isLoading("tmdb")}
+              className="rounded-lg bg-[#A8DADC] px-3 py-2 text-xs font-semibold text-black hover:bg-[#A8DADC]/80 disabled:opacity-60 disabled:cursor-not-allowed transition"
+            >
+              {isLoading("tmdb") ? "Sync TMDB..." : "Sync TMDB"}
+            </button>
+
+            <button
+              onClick={() => handleSync("primeran")}
+              disabled={isLoading("primeran")}
+              className="rounded-lg bg-[#F4A261] px-3 py-2 text-xs font-semibold text-black hover:bg-[#F4A261]/80 disabled:opacity-60 disabled:cursor-not-allowed transition"
+            >
+              {isLoading("primeran") ? "Sync Primeran..." : "Sync Primeran"}
+            </button>
+
+            <button
+              onClick={() => handleSync("all")}
+              disabled={isLoading("all")}
+              className="col-span-2 rounded-lg bg-[#1D3557] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1D3557]/80 disabled:opacity-60 disabled:cursor-not-allowed transition"
+            >
+              {isLoading("all") ? "Sync TODO..." : "Sync TODO"}
+            </button>
+          </div>
 
           {message && (
-            <p className="text-sm text-green-400 mt-1">
-              ✅ {message}
-            </p>
+            <p className="text-sm text-green-400 mt-2">✅ {message}</p>
           )}
           {error && (
-            <p className="text-sm text-red-400 mt-1">
-              ⚠️ {error}
-            </p>
+            <p className="text-sm text-red-400 mt-2">⚠️ {error}</p>
           )}
         </div>
       </div>
     </div>
   );
 }
-

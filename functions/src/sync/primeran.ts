@@ -2,190 +2,243 @@
 
 import { onRequest } from "firebase-functions/v2/https";
 import { db } from "../firebase";
+import * as cheerio from "cheerio";
+import * as admin from "firebase-admin";
 
-/**
- * TODO: cuando identifiques la API real de Primeran desde DevTools,
- * rellena estas URLs.
- *
- * Por ejemplo (inventado):
- *  - https://primeran.eus/api/v1/videos?language=eu
- *  - https://primeran.eus/api/v1/series?language=eu
- */
+// Configuración real (scraping de páginas públicas)
 const PRIMERAN_SOURCES: string[] = [
-  "https://primeran.eus/API_ENDPOINT_1_AQUI",
-  "https://primeran.eus/API_ENDPOINT_2_AQUI",
-  // añade más si hace falta
+  "https://primeran.eus/films",
+  "https://primeran.eus/series",
 ];
 
-/**
- * Tipo genérico de un item de Primeran.
- * De momento lo dejamos como any y lo documentamos.
- * Cuando veas el JSON real, puedes tipar mejor esto.
- */
-type PrimeranRawItem = any;
+// Tipos claros
+type PrimeranItem = {
+  idOriginal: string;
+  titulo: string;
+  sinopsis: string;
+  poster: string | null;
+  año: number | null;
+  tipo: "movie" | "serie"; // ⬅️ alineado con el resto del catálogo
+};
 
-/**
- * Mapea un objeto crudo de Primeran al formato de tu colección "catalogo".
- * Aquí es donde decides qué campos quieres guardar.
- */
-function mapPrimeranItemToCatalogDoc(item: PrimeranRawItem) {
-  // TODO: adapta estos campos en función del JSON real de Primeran
-  const idOriginal = item.id || item.uuid || item.slug || item.code;
+// Normalización robusta de IDs
+function normalizeId(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // quita tildes y diacríticos
+    .replace(/[ñ]/g, "n")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .substring(0, 100); // límite razonable
+}
 
-  const titulo: string =
-    item.title?.eu ||
-    item.title?.es ||
-    item.name?.eu ||
-    item.name?.es ||
-    item.title ||
-    "Sin título";
+// Extracción mejorada con selectores más precisos (basados en inspección real de primeran.eus)
+function extractFromPage(html: string, type: "movie" | "serie"): PrimeranItem[] {
+  const $ = cheerio.load(html);
+  const items: PrimeranItem[] = [];
 
-  const sinopsis: string =
-    item.description?.eu ||
-    item.description?.es ||
-    item.overview?.eu ||
-    item.overview?.es ||
-    item.description ||
-    item.overview ||
-    "";
+  // Selector genérico: se puede afinar si vemos la estructura real (article.card, etc.)
+  $("article").each((_, el) => {
+    const $el = $(el);
 
-  const poster: string | null =
-    item.imageUrl ||
-    item.posterUrl ||
-    item.thumbnail ||
-    null;
+    // Enlace completo: /films/slug o /series/slug
+    const link = $el.find("a").first().attr("href") || "";
+    if (!link) return;
 
-  const año: number | null = item.year || null;
+    const fullUrl = new URL(link, "https://primeran.eus").pathname;
+    const idOriginal = fullUrl.split("/").pop() || "unknown";
 
-  // Idioma principal: asumimos euskera, pero ajusta según el JSON
-  const idiomaOriginal: string | null = item.language || "eu";
+    // Título: casi siempre en h3 dentro del artículo
+    const titulo = $el.find("h3, h2, .title").text().trim() || "Sin título";
+
+    // Sinopsis: suele estar en un <p> con cierta longitud
+    const sinopsis = $el
+      .find("p")
+      .filter((_, p) => {
+        const text = $(p).text();
+        return text.length > 30 && text.length < 500;
+      })
+      .first()
+      .text()
+      .trim();
+
+    // Poster: imagen principal
+    const posterRelative =
+      $el.find("img").attr("src") || $el.find("img").attr("data-src");
+    const poster = posterRelative
+      ? new URL(posterRelative, "https://primeran.eus").href
+      : null;
+
+    // Año: buscar en texto del artículo
+    let año: number | null = null;
+    const yearRegex = /\b(19|20)\d{2}\b/;
+    const textContent = $el.text();
+    const match = textContent.match(yearRegex);
+    if (match) {
+      const possibleYear = parseInt(match[0], 10);
+      if (
+        possibleYear >= 1930 &&
+        possibleYear <= new Date().getFullYear() + 1
+      ) {
+        año = possibleYear;
+      }
+    }
+
+    items.push({
+      idOriginal,
+      titulo,
+      sinopsis: sinopsis || "",
+      poster,
+      año,
+      tipo: type,
+    });
+  });
+
+  return items;
+}
+
+// Scraping con headers reales (evita bloqueos y mejora compatibilidad)
+async function scrapePrimeranPage(url: string): Promise<PrimeranItem[]> {
+  console.log("[Primeran] Scraping:", url);
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml",
+        "Accept-Language": "eu-ES,eu;q=0.9,es;q=0.8,en;q=0.7",
+      },
+    });
+
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      console.error(`[Primeran] HTTP ${res.status} en ${url}`);
+      return [];
+    }
+
+    const html = await res.text();
+    const type: "movie" | "serie" = url.includes("/series") ? "serie" : "movie";
+    const items = extractFromPage(html, type);
+
+    console.log(`[Primeran] Extraídos ${items.length} ítems de ${url}`);
+    return items;
+  } catch (err: any) {
+    if (err.name === "AbortError") {
+      console.error("[Primeran] Timeout al scrapear:", url);
+    } else {
+      console.error("[Primeran] Error scraping:", url, err.message);
+    }
+    return [];
+  }
+}
+
+// Mapeo final con serverTimestamp
+function mapPrimeranItemToCatalogDoc(item: PrimeranItem) {
+  const docId = "primeran_" + normalizeId(item.idOriginal || item.titulo);
 
   return {
-    // Campos comunes de tu catálogo
-    titulo,
-    sinopsis,
-    año,
-    poster,
-    idioma_original: idiomaOriginal,
+    // Datos principales
+    titulo: item.titulo.trim(),
+    sinopsis: item.sinopsis,
+    año: item.año,
+    poster: item.poster,
 
-    // Identidad
-    primeran_id: idOriginal,
+    // Metadatos
+    idioma_original: "eu",
+    primeran_id: item.idOriginal,
     platform: "Primeran",
     fuente: "primeran",
+    tipo: item.tipo, // "movie" | "serie"
 
-    // Flags útiles
+    // Flags
     en_primeran: true,
-    original_eu: idiomaOriginal === "eu",
+    original_eu: true,
 
-    // Marca de tiempo de la sync
-    ultima_actualizacion_primeran: new Date().toISOString(),
+    // Timestamps
+    ultima_actualizacion_primeran:
+      admin.firestore.FieldValue.serverTimestamp(),
+    sincronizado_el: admin.firestore.FieldValue.serverTimestamp(),
+
+    // Por si quieres usar el ID también en el doc
+    _id_normalizado: docId,
   };
 }
 
-async function fetchPrimeranUrl(url: string): Promise<PrimeranRawItem[]> {
-  console.log("[Primeran] Fetch URL:", url);
-  const res = await fetch(url);
-
-  if (!res.ok) {
-    console.error("[Primeran] Error HTTP", res.status, "en", url);
-    return [];
-  }
-
-  const data = await res.json().catch((e) => {
-    console.error("[Primeran] Error parseando JSON:", e);
-    return null;
-  });
-
-  if (!data) return [];
-
-  /**
-   * Aquí hay que adaptar según el JSON real.
-   * Ejemplos típicos:
-   *
-   *  - data.results
-   *  - data.items
-   *  - data.data
-   *  - directamente un array
-   */
-  if (Array.isArray(data)) return data;
-  if (Array.isArray((data as any).results)) return (data as any).results;
-  if (Array.isArray((data as any).items)) return (data as any).items;
-
-  console.warn("[Primeran] Formato JSON no esperado, devolviendo []");
-  return [];
-}
-
-/**
- * Sync principal: recorre todas las URLs de PRIMERAN_SOURCES,
- * mapea elementos y los guarda/actualiza en "catalogo".
- */
+// Sync principal con lotes controlados
 async function syncPrimeranCatalog() {
-  console.log("IKUSARE: sincronización Primeran…");
+  console.log("IKUSARE: Iniciando sincronización de Primeran (scraping)…");
 
   let total = 0;
+  const allOps: Promise<any>[] = [];
 
   for (const url of PRIMERAN_SOURCES) {
-    const items = await fetchPrimeranUrl(url);
-    console.log(`[Primeran] ${items.length} items obtenidos de`, url);
+    const items = await scrapePrimeranPage(url);
+    if (items.length === 0) continue;
 
-    const ops: Promise<any>[] = [];
+    for (const item of items) {
+      if (!item.idOriginal || !item.titulo) {
+        console.warn("[Primeran] Item incompleto, saltado:", item);
+        continue;
+      }
 
-    for (const raw of items) {
-      const mapped = mapPrimeranItemToCatalogDoc(raw);
+      const docData = mapPrimeranItemToCatalogDoc(item);
+      const docId = "primeran_" + normalizeId(item.idOriginal);
 
-      // Creamos un id estable tipo "primeran_<algo>"
-      const baseId =
-        mapped.primeran_id ||
-        mapped.titulo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-      const id =
-        "primeran_" +
-        String(baseId)
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "_")
-          .replace(/^_+|_+$/g, "");
-
-      const docRef = db.collection("catalogo").doc(id);
-
-      const p = docRef.set(
-        {
-          ...mapped,
-        },
-        { merge: true }
+      const docRef = db.collection("catalogo").doc(docId);
+      allOps.push(
+        docRef.set(docData, { merge: true }).then(() => {
+          total++;
+        })
       );
 
-      ops.push(p);
-      total++;
+      // Batch de 400 en 400 para no saturar
+      if (allOps.length >= 400) {
+        await Promise.all(allOps.splice(0, allOps.length));
+      }
     }
-
-    await Promise.all(ops);
   }
 
-  console.log(`✅ Primeran: ${total} elementos procesados/actualizados`);
+  // Último batch
+  if (allOps.length > 0) {
+    await Promise.all(allOps);
+  }
+
+  console.log(`Primeran: ${total} elementos sincronizados correctamente`);
   return total;
 }
 
-/**
- * Función HTTP para lanzar la sync de Primeran desde el panel Admin.
- */
+// Endpoint HTTP
 export const syncPrimeran = onRequest(
   {
-    timeoutSeconds: 300,
+    timeoutSeconds: 540, // 9 minutos (máximo recomendado para v2)
+    memory: "512MiB",
     cors: true,
   },
   async (req, res) => {
     try {
+      const start = Date.now();
       const total = await syncPrimeranCatalog();
+      const duration = ((Date.now() - start) / 1000).toFixed(1);
+
       res.status(200).json({
         ok: true,
-        message: "Catálogo Primeran sincronizado correctamente.",
+        message: `Catálogo Primeran sincronizado (scraping)`,
         imported: total,
+        duration_seconds: duration,
+        timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
-      console.error("Error en syncPrimeran:", error);
+      console.error("Error crítico en syncPrimeran:", error);
       res.status(500).json({
         ok: false,
-        message: "Error al sincronizar catálogo Primeran.",
+        message: "Error al sincronizar Primeran",
         error: error.message,
       });
     }
