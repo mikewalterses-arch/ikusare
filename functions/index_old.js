@@ -296,20 +296,26 @@ exports.dailySync = onSchedule(
 );
 
 // 2) Endpoint HTTP para lanzar TODA la sync desde el panel admin
-exports.syncCatalogHttp = onRequest(async (req, res) => {
-  try {
-    console.log("Lanzando syncCatalog desde syncCatalogHttp...");
-    await syncCatalog();
-    res
-      .status(200)
-      .json({ ok: true, message: "Catálogo sincronizado correctamente." });
-  } catch (error) {
-    console.error("Error en syncCatalogHttp:", error);
-    res
-      .status(500)
-      .json({ ok: false, message: "Error al sincronizar catálogo." });
+exports.syncCatalogHttp = onRequest(
+  {
+    timeoutSeconds: 300,     // ⬅️ hasta 5 minutos
+    cors: true               // opcional, pero viene bien si llamas desde el front
+  },
+  async (req, res) => {
+    try {
+      console.log("Lanzando syncCatalog desde syncCatalogHttp...");
+      await syncCatalog();
+      res
+        .status(200)
+        .json({ ok: true, message: "Catálogo sincronizado correctamente." });
+    } catch (error) {
+      console.error("Error en syncCatalogHttp:", error);
+      res
+        .status(500)
+        .json({ ok: false, message: "Error al sincronizar catálogo." });
+    }
   }
-});
+);
 
 // 3) Endpoint HTTP para sincronizar SOLO ETB
 exports.syncEtbOnly = onRequest(async (req, res) => {
