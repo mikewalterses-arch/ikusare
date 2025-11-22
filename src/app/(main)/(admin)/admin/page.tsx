@@ -1,3 +1,5 @@
+// AHORA PODEMOS DESPLEGAR CADA API A PARTE
+
 "use client";
 
 import { useState } from "react";

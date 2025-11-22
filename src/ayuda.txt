@@ -1,5 +1,5 @@
 //Para subir a github:
-
+cd ~/ikusare
 git status
 git init
 git add .
