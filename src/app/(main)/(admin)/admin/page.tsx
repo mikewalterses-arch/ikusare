@@ -9,10 +9,10 @@ type SyncTarget = "makusi" | "etb" | "tmdb" | "primeran" | "all";
 // ⚠️ RELLENA ESTAS URLs CON LAS QUE VES EN FIREBASE → FUNCTIONS
 // Deben ser las de Cloud Run, tipo: https://syncmakusi-XXXX-uc.a.run.app
 const ENDPOINTS: Record<Exclude<SyncTarget, "all">, string> = {
-  makusi: "https://syncmakusi-XXXX-uc.a.run.app",
-  etb: "https://syncetbonly-XXXX-uc.a.run.app",
-  tmdb: "https://synccataloghttp-XXXX-uc.a.run.app",
-  primeran: "https://syncprimeran-XXXX-uc.a.run.app",
+  makusi: "https://syncmakusi-wjd63pi4ra-uc.a.run.app",
+  etb: "https://syncetbonly-wjd63pi4ra-uc.a.run.app",
+  tmdb: "https://synccataloghttp-wjd63pi4ra-uc.a.run.app",
+  primeran: "https://syncprimeran-wjd63pi4ra-uc.a.run.app",
 };
 
 export default function AdminHome() {
